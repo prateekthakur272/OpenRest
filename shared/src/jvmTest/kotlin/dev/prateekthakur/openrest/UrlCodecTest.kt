@@ -1,6 +1,8 @@
 package dev.prateekthakur.openrest
 
-import dev.prateekthakur.openrest.core.UrlCodec
+import dev.prateekthakur.openrest.utils.*
+
+import dev.prateekthakur.openrest.utils.UrlCodec
 import kotlin.test.*
 
 class UrlCodecTest {

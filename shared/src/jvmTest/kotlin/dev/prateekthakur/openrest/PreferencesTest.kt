@@ -1,10 +1,13 @@
 package dev.prateekthakur.openrest
 
+import dev.prateekthakur.openrest.app.*
+import dev.prateekthakur.openrest.core.model.*
+import dev.prateekthakur.openrest.core.storage.*
+import dev.prateekthakur.openrest.features.shell.*
+
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
-import dev.prateekthakur.openrest.app.*
-import dev.prateekthakur.openrest.core.*
-import dev.prateekthakur.openrest.ui.OpenRestApp
+import dev.prateekthakur.openrest.features.shell.OpenRestApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import java.io.File
@@ -101,7 +104,7 @@ class PreferencesTest {
         // the rule
         assertTrue(ThemeMode.System.isDark(true)); assertFalse(ThemeMode.System.isDark(false))
         assertFalse(ThemeMode.Light.isDark(true)); assertTrue(ThemeMode.Dark.isDark(false))
-        assertEquals(AppSettings().theme, ThemeMode.Dark)                                  // the default is unchanged
+        assertEquals(AppSettings().theme, ThemeMode.System)                                // new installs follow the operating system
         // settings files written before "System" existed
         val file = AppStore.dir.resolve("settings.json")
         file.toFile().writeText("""{"dark": false, "fontSize": 14}""")
@@ -111,7 +114,7 @@ class PreferencesTest {
         file.toFile().writeText("""{"theme": "system", "dark": true}""")                    // the new key wins
         assertEquals(ThemeMode.System, AppStore.loadSettings().theme)
         file.toFile().writeText("""{"theme": "bogus"}""")
-        assertEquals(ThemeMode.Dark, AppStore.loadSettings().theme)
+        assertEquals(ThemeMode.System, AppStore.loadSettings().theme)
         AppStore.saveSettings(AppSettings(theme = ThemeMode.System))
         assertTrue(file.toFile().readText().contains("\"theme\": \"system\""))
     }

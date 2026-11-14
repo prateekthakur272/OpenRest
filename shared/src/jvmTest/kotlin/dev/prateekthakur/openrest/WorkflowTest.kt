@@ -1,6 +1,10 @@
 package dev.prateekthakur.openrest
 
-import dev.prateekthakur.openrest.core.*
+import dev.prateekthakur.openrest.core.model.*
+import dev.prateekthakur.openrest.core.run.*
+import dev.prateekthakur.openrest.core.storage.*
+import dev.prateekthakur.openrest.utils.*
+
 import kotlin.io.path.*
 import kotlin.test.*
 

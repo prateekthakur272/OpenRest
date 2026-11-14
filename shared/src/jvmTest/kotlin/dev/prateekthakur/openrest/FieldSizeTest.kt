@@ -1,9 +1,12 @@
 package dev.prateekthakur.openrest
 
-import androidx.compose.ui.test.*
 import dev.prateekthakur.openrest.app.*
-import dev.prateekthakur.openrest.core.*
-import dev.prateekthakur.openrest.ui.OpenRestApp
+import dev.prateekthakur.openrest.core.model.*
+import dev.prateekthakur.openrest.core.storage.*
+import dev.prateekthakur.openrest.features.shell.*
+
+import androidx.compose.ui.test.*
+import dev.prateekthakur.openrest.features.shell.OpenRestApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlin.io.path.*

@@ -1,8 +1,15 @@
 package dev.prateekthakur.openrest.app
 
+import dev.prateekthakur.openrest.core.codegen.*
+import dev.prateekthakur.openrest.core.interop.*
+import dev.prateekthakur.openrest.core.model.*
+import dev.prateekthakur.openrest.core.model.Collection
+import dev.prateekthakur.openrest.core.run.*
+import dev.prateekthakur.openrest.core.storage.*
+import dev.prateekthakur.openrest.platform.*
+import dev.prateekthakur.openrest.utils.*
+
 import androidx.compose.runtime.*
-import dev.prateekthakur.openrest.core.*
-import dev.prateekthakur.openrest.core.Collection
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,187 +17,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
-import java.awt.Desktop
-import java.awt.FileDialog
-import java.awt.Frame
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
 import java.nio.file.Path
 import java.nio.file.Paths
-import javax.swing.JFileChooser
 import kotlin.io.path.*
-
-object Platform {
-    val isMac = System.getProperty("os.name").lowercase().contains("mac")
-    private val mac get() = isMac
-
-    fun pickDirectory(title: String): Path? = try {
-        if (mac) {
-            System.setProperty("apple.awt.fileDialogForDirectories", "true")
-            val d = FileDialog(null as Frame?, title, FileDialog.LOAD)
-            d.isVisible = true
-            System.setProperty("apple.awt.fileDialogForDirectories", "false")
-            if (d.file != null) Paths.get(d.directory, d.file) else null
-        } else {
-            val c = JFileChooser().apply { dialogTitle = title; fileSelectionMode = JFileChooser.DIRECTORIES_ONLY }
-            if (c.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) c.selectedFile.toPath() else null
-        }
-    } catch (_: Exception) { null }
-
-    fun pickFile(title: String): Path? = try {
-        if (mac) {
-            val d = FileDialog(null as Frame?, title, FileDialog.LOAD)
-            d.isVisible = true
-            if (d.file != null) Paths.get(d.directory, d.file) else null
-        } else {
-            val c = JFileChooser().apply { dialogTitle = title }
-            if (c.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) c.selectedFile.toPath() else null
-        }
-    } catch (_: Exception) { null }
-
-    fun saveFile(title: String, name: String): Path? = try {
-        val d = FileDialog(null as Frame?, title, FileDialog.SAVE)
-        d.file = name
-        d.isVisible = true
-        if (d.file != null) Paths.get(d.directory, d.file) else null
-    } catch (_: Exception) { null }
-
-    fun reveal(p: Path) {
-        runCatching { if (Desktop.isDesktopSupported()) Desktop.getDesktop().open((if (p.isDirectory()) p else p.parent).toFile()) }
-    }
-
-    fun openBytes(bytes: ByteArray, ext: String, browser: Boolean = false) {
-        runCatching {
-            val f = java.nio.file.Files.createTempFile("openrest-", ext).also { it.toFile().deleteOnExit() }
-            java.nio.file.Files.write(f, bytes)
-            if (Desktop.isDesktopSupported()) { if (browser) Desktop.getDesktop().browse(f.toUri()) else Desktop.getDesktop().open(f.toFile()) }
-        }
-    }
-
-    fun copy(text: String) {
-        runCatching { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) }
-    }
-
-    fun paste(): String = runCatching { Toolkit.getDefaultToolkit().systemClipboard.getData(java.awt.datatransfer.DataFlavor.stringFlavor) as String }.getOrDefault("")
-}
-
-sealed interface Modal {
-    data class Prompt(val title: String, val initial: String, val label: String, val confirm: String, val onOk: (String) -> Unit) : Modal
-    data class Confirm(val title: String, val message: String, val confirm: String, val onOk: () -> Unit) : Modal
-    data class NewRequest(val collection: Path, val dir: Path) : Modal
-    data object NewCollection : Modal
-    data object OpenCollection : Modal
-    /** collection == null opens the global environments. */
-    data class Envs(val collection: Path?) : Modal
-    data class Codegen(val tabId: Int) : Modal
-    data object Import : Modal
-    data object Settings : Modal
-    data object About : Modal
-    data object Cookies : Modal
-    data class NodeSettings(val collection: Path, val node: Path) : Modal
-    data class Vars(val collection: Path) : Modal
-    data class Export(val collection: Path) : Modal
-    /** parent == null adds to the top level; otherwise to that block's main (branch 0) or else (branch 1) list. */
-    data class AddStep(val tabId: Int, val parent: String? = null, val branch: Int = 0) : Modal
-    /** The complete last response of a workflow step. */
-    data class ViewResponse(val tabId: Int, val stepId: String) : Modal
-    data object Palette : Modal
-}
-
-class HistoryEntry(
-    val time: Long, val collection: Path, val file: Path, val name: String, val method: String,
-    val url: String, val status: Int, val timeMs: Long, val error: String?, val result: ExecResult,
-)
-
-/** Editable state of a Runner tab; lives on the tab so it survives switching between tabs. */
-class RunnerSession(val folder: Path?, requests: List<RequestNode>) {
-    val order = mutableStateListOf<RequestNode>().also { it.addAll(requests) }
-    val selected = mutableStateMapOf<Path, Boolean>().also { m -> requests.forEach { m[it.path] = true } }
-    val results = mutableStateListOf<Runner.Item>()
-    var running by mutableStateOf(false)
-    var current by mutableStateOf("")
-    var stopOnFail by mutableStateOf(false)
-    var delay by mutableStateOf("")
-    var iterations by mutableStateOf("1")
-    var cancelled by mutableStateOf(false)
-    var expanded by mutableStateOf<Int?>(null)
-
-    val chosen get() = order.filter { selected[it.path] == true }
-    val iters get() = (iterations.toIntOrNull() ?: 1).coerceIn(1, 100)
-
-    fun resetOrder(requests: List<RequestNode>) {
-        order.clear(); order.addAll(requests); requests.forEach { selected[it.path] = true }
-    }
-}
-
-/** Editable state + last run of a workflow tab. */
-class WorkflowSession(initial: Workflow) {
-    var draft by mutableStateOf(initial)
-    var saved by mutableStateOf(initial)
-    /** Last execution of each request block (a block in a loop runs many times; [counts] says how many). */
-    val runs = mutableStateMapOf<String, StepRun>()
-    val counts = mutableStateMapOf<String, Int>()
-    /** Every execution of a request block in the last run, oldest first (a loop runs its blocks many times). */
-    val history = mutableStateMapOf<String, List<StepRun>>()
-    /** Everything that happened in the last run, in order, for the run log. */
-    val events = mutableStateListOf<RunEvent>()
-    var running by mutableStateOf(false)
-    var current by mutableStateOf<String?>(null)
-    var cancelled by mutableStateOf(false)
-    /** Run log: show only the entries that went wrong. */
-    var logProblemsOnly by mutableStateOf(false)
-    /** The run log is a bottom-docked panel: expanded or just its header bar, and how tall it is (dp). */
-    var logExpanded by mutableStateOf(false)
-    var logHeight by mutableStateOf(280f)
-    /** Run log entries (by position) that are expanded to show details. */
-    val logOpen = mutableStateMapOf<Int, Boolean>()
-    var expanded by mutableStateOf<String?>(null)
-    /** The block whose configuration is open in the side pane (null = the first one). */
-    var selected by mutableStateOf<String?>(null)
-    val dirty get() = draft != saved
-    fun update(f: (Workflow) -> Workflow) { draft = f(draft) }
-    fun updateStep(id: String, f: (WorkflowStep) -> WorkflowStep) = update { w -> w.copy(steps = w.steps.mapStep(id, f)) }
-}
-
-class RequestTab(
-    val id: Int, val collectionPath: Path, filePath: Path, req: ApiRequest,
-    val runner: RunnerSession? = null, val workflow: WorkflowSession? = null,
-) {
-    val isRequest get() = runner == null && workflow == null
-    val title: String get() = workflow?.draft?.name ?: draft.name
-    var filePath by mutableStateOf(filePath)
-    var draft by mutableStateOf(req)
-    var saved by mutableStateOf(req)
-    var result by mutableStateOf<ExecResult?>(null)
-    var sending by mutableStateOf(false)
-    var reqTab by mutableStateOf("Params")
-    var resTab by mutableStateOf("Response")
-    var resView by mutableStateOf("Auto")
-    var resPreview by mutableStateOf<Boolean?>(null)
-    var filter by mutableStateOf("")
-    var scriptTab by mutableStateOf("Pre Request")
-    var varsTab by mutableStateOf("Pre Request")
-    val responses = mutableStateListOf<ExecResult>()
-    var viewing by mutableStateOf(0)
-    var diff by mutableStateOf(false)
-    var find by mutableStateOf("")
-    var job: Job? = null
-    fun push(r: ExecResult) {
-        responses.add(0, r)
-        while (responses.size > 10) responses.removeAt(responses.size - 1)
-        viewing = 0
-        result = r
-    }
-    val dirty get() = if (workflow != null) workflow.dirty else draft != saved
-}
-
-/** Which menu of the in-window menu bar is open, and where things are on screen (so a click elsewhere can close it). */
-class TitleMenuState {
-    var open by mutableStateOf<String?>(null)
-    val anchors = HashMap<String, androidx.compose.ui.geometry.Rect>()
-    var panel: androidx.compose.ui.geometry.Rect? = null
-    fun close() { open = null }
-}
 
 class AppState(val scope: CoroutineScope) {
     val titleMenu = TitleMenuState()
@@ -268,6 +97,9 @@ class AppState(val scope: CoroutineScope) {
     }
 
     fun updateSettings(s: AppSettings) { settings = s; AppStore.saveSettings(s) }
+
+    /** Closes the first-run walkthrough, remembers that it was seen (the settings file now exists) and optionally opens what the user picked next. */
+    fun finishOnboarding(next: Modal? = null) { AppStore.saveSettings(settings); modal = next }
 
     // ---------------- collections ----------------
 

@@ -1,9 +1,11 @@
 package dev.prateekthakur.openrest
 
+import dev.prateekthakur.openrest.components.*
+
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import dev.prateekthakur.openrest.ui.lineCol
-import dev.prateekthakur.openrest.ui.smartEdit
+import dev.prateekthakur.openrest.components.lineCol
+import dev.prateekthakur.openrest.components.smartEdit
 import kotlin.test.*
 
 class EditingTest {

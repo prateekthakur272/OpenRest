@@ -1,5 +1,10 @@
 package dev.prateekthakur.openrest
 
+import dev.prateekthakur.openrest.app.*
+import dev.prateekthakur.openrest.core.storage.*
+import dev.prateekthakur.openrest.features.shell.*
+import dev.prateekthakur.openrest.platform.*
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.window.WindowDraggableArea
@@ -23,26 +28,29 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dev.prateekthakur.openrest.app.AppState
-import dev.prateekthakur.openrest.app.Platform
-import dev.prateekthakur.openrest.ui.AppInfo
-import dev.prateekthakur.openrest.ui.AppMenus
-import dev.prateekthakur.openrest.ui.MenuEntry
-import dev.prateekthakur.openrest.ui.MenuItemSpec
-import dev.prateekthakur.openrest.ui.MenuSeparator
-import dev.prateekthakur.openrest.ui.OpenRestApp
-import dev.prateekthakur.openrest.ui.ResizeEdges
-import dev.prateekthakur.openrest.ui.WindowChrome
-import dev.prateekthakur.openrest.ui.WindowControls
-import dev.prateekthakur.openrest.ui.SubMenuSpec
-import dev.prateekthakur.openrest.ui.handleKey
-import dev.prateekthakur.openrest.ui.installMacAppMenu
+import dev.prateekthakur.openrest.platform.Platform
+import dev.prateekthakur.openrest.features.shell.AppInfo
+import dev.prateekthakur.openrest.features.shell.AppMenus
+import dev.prateekthakur.openrest.features.shell.MenuEntry
+import dev.prateekthakur.openrest.features.shell.MenuItemSpec
+import dev.prateekthakur.openrest.features.shell.MenuSeparator
+import dev.prateekthakur.openrest.features.shell.OpenRestApp
+import dev.prateekthakur.openrest.features.shell.ResizeEdges
+import dev.prateekthakur.openrest.features.shell.WindowChrome
+import dev.prateekthakur.openrest.features.shell.WindowControls
+import dev.prateekthakur.openrest.features.shell.SubMenuSpec
+import dev.prateekthakur.openrest.features.shell.handleKey
+import dev.prateekthakur.openrest.features.shell.installMacAppMenu
 
 fun main() {
     // macOS shows this in the menu bar and the Dock instead of the Java class name
     System.setProperty("apple.awt.application.name", AppInfo.NAME)
     application {
         val scope = rememberCoroutineScope()
-        val state = remember { AppState(scope) }
+        val state = remember {
+            val firstRun = AppStore.isFirstRun()                      // decided before anything is saved
+            AppState(scope).also { if (firstRun) it.modal = Modal.Onboarding }
+        }
         val quit = { state.persist(); exitApplication() }
         val isMac = Platform.isMac
         val windowState = rememberWindowState(size = DpSize(1360.dp, 860.dp))

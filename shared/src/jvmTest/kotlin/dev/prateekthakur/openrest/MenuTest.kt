@@ -1,10 +1,15 @@
 package dev.prateekthakur.openrest
 
+import dev.prateekthakur.openrest.app.*
+import dev.prateekthakur.openrest.core.http.*
+import dev.prateekthakur.openrest.core.model.*
+import dev.prateekthakur.openrest.core.model.Collection
+import dev.prateekthakur.openrest.core.run.*
+import dev.prateekthakur.openrest.core.storage.*
+import dev.prateekthakur.openrest.features.shell.*
+
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.*
-import dev.prateekthakur.openrest.app.*
-import dev.prateekthakur.openrest.core.*
-import dev.prateekthakur.openrest.ui.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlin.io.path.createTempDirectory
@@ -94,10 +99,10 @@ class MenuTest {
         s.modal = null
 
         // theme: a check item per mode, the current one checked
-        assertEquals(ThemeMode.Dark, s.settings.theme)
-        assertTrue(menus().item("Dark").checked == true && menus().item("System").checked == false)
-        menus().item("System").action(); assertEquals(ThemeMode.System, s.settings.theme)
+        assertEquals(ThemeMode.System, s.settings.theme)
         assertTrue(menus().item("System").checked == true && menus().item("Dark").checked == false)
+        menus().item("Dark").action(); assertEquals(ThemeMode.Dark, s.settings.theme)
+        assertTrue(menus().item("Dark").checked == true && menus().item("System").checked == false)
         menus().item("Light").action(); assertEquals(ThemeMode.Light, s.settings.theme)
 
         // view toggles reflect and change state
