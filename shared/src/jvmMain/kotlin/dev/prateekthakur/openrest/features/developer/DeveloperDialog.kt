@@ -6,6 +6,8 @@ import dev.prateekthakur.openrest.features.shell.*
 import dev.prateekthakur.openrest.platform.*
 import dev.prateekthakur.openrest.theme.*
 
+import dev.prateekthakur.openrest.BuildConfig
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -31,12 +33,12 @@ fun DeveloperDialog(state: AppState) {
                 Ico(Ic.GitHub, tint = p.text, size = 32.dp)
             }
             Column {
-                T(AppInfo.DEVELOPER_NAME, size = 18, weight = FontWeight.Bold, modifier = Modifier.testTag("developer-name"))
+                T(BuildConfig.VENDOR, size = 18, weight = FontWeight.Bold, modifier = Modifier.testTag("developer-name"))
                 T("Developer of ${AppInfo.NAME}", color = p.muted)
             }
         }
-        LinkRow("Profile", AppInfo.DEVELOPER_URL, "developer-profile")
-        LinkRow("Project repository", AppInfo.REPO_URL, "developer-repo")
+        LinkRow("Profile", BuildConfig.DEVELOPER_URL, "developer-profile")
+        LinkRow("Project repository", BuildConfig.HOMEPAGE, "developer-repo")
         T("OpenRest is built in the open. Bug reports, ideas and pull requests are welcome on GitHub.", color = p.muted, size = 12)
     }
 }

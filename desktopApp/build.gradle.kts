@@ -15,6 +15,12 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
 }
 
+// App metadata comes from gradle.properties (also written into the jar manifest, which the running app reads).
+val appVersion: String by project
+val appVendor: String by project
+val appDescription: String by project
+val appHomepage: String by project
+
 compose.desktop {
     application {
         mainClass = "dev.prateekthakur.openrest.MainKt"
@@ -24,7 +30,9 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "OpenRest"                       // the app's label: OpenRest.app, the Dock, the menu bar, the DMG
-            packageVersion = "1.0.0"                       // keep in step with AppInfo.VERSION (a test checks this)
+            packageVersion = appVersion                    // the installer version
+            vendor = appVendor
+            description = appDescription
             macOS {
                 bundleID = "dev.prateekthakur.openrest"    // identity, not a label: keep it so settings and installs carry over
                 iconFile.set(project.file("icons/icon.icns"))

@@ -159,11 +159,16 @@ class MenuTest {
         assertNull(s.prefsSection)
         s.modal = null; waitForIdle()
         AppMenus.build(s, isMac = false).item("About OpenRest").action(); waitForIdle()
-        onNodeWithText("Version ${AppInfo.VERSION}").assertExists()
+        onNodeWithText("Version ${BuildConfig.VERSION}").assertExists()
     }
 
-    @Test fun aboutVersionMatchesThePackageVersion() {
-        val gradle = java.io.File("../desktopApp/build.gradle.kts").takeIf { it.exists() } ?: java.io.File("desktopApp/build.gradle.kts")
-        if (gradle.exists()) assertTrue(gradle.readText().contains("packageVersion = \"${AppInfo.VERSION}\""), "AppInfo.VERSION is out of step with desktopApp/build.gradle.kts")
+    @Test fun buildConfigMatchesGradleProperties() {
+        val root = java.io.File("../gradle.properties").takeIf { it.exists() } ?: java.io.File("gradle.properties")
+        if (!root.exists()) return
+        val p = java.util.Properties().apply { root.reader().use { load(it) } }
+        assertEquals(p.getProperty("appVersion"), BuildConfig.VERSION)
+        assertTrue(Regex("""\d+\.\d+\.\d+""").matches(BuildConfig.VERSION), "appVersion must be x.y.z")
+        assertEquals(p.getProperty("appVendor"), BuildConfig.VENDOR); assertEquals(p.getProperty("appDescription"), BuildConfig.DESCRIPTION)
+        assertEquals(p.getProperty("appHomepage"), BuildConfig.HOMEPAGE); assertEquals(p.getProperty("appDeveloperUrl"), BuildConfig.DEVELOPER_URL)
     }
 }

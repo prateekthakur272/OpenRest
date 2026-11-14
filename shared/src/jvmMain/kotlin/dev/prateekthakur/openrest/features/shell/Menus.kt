@@ -9,6 +9,8 @@ import dev.prateekthakur.openrest.core.run.*
 import dev.prateekthakur.openrest.platform.*
 import dev.prateekthakur.openrest.theme.*
 
+import dev.prateekthakur.openrest.BuildConfig
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,12 +22,6 @@ import androidx.compose.ui.unit.dp
 
 object AppInfo {
     const val NAME = "OpenRest"
-    /** Keep in step with `packageVersion` in desktopApp/build.gradle.kts. */
-    const val VERSION = "1.0.0"
-    /** Developer details, shown in the dialog behind the GitHub button and Help ▸ Developer. */
-    const val DEVELOPER_NAME = "Prateek Thakur"
-    const val DEVELOPER_URL = "https://github.com/prateekthakur272"
-    const val REPO_URL = "https://github.com/prateekthakur272/OpenRest"
     const val TAGLINE = "An open, file-based API client — requests, environments and workflows that live in plain folders."
 }
 
@@ -192,7 +188,8 @@ fun AboutDialog(state: AppState) {
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Ico(Ic.Logo, tint = p.accent, size = 56.dp)
             T(AppInfo.NAME, size = 22, weight = FontWeight.Bold)
-            T("Version ${AppInfo.VERSION}", color = p.muted, size = 12)
+            T("Version ${BuildConfig.VERSION}", color = p.muted, size = 12)
+            if (BuildConfig.VENDOR.isNotBlank()) T("by ${BuildConfig.VENDOR}", color = p.muted, size = 12)
             Spacer(Modifier.height(6.dp))
             T(AppInfo.TAGLINE, color = p.muted, size = 12, modifier = Modifier.padding(horizontal = 12.dp))
             Spacer(Modifier.height(6.dp))

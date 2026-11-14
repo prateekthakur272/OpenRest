@@ -1,0 +1,113 @@
+# Builds the macOS installers and publishes a GitHub release whenever a version tag is pushed:
+#
+#   git tag v1.0.1 && git push origin v1.0.1
+#
+# The tag must match `appVersion` in gradle.properties; the run stops early if it does not.
+name: Release (macOS)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write        # create the release and upload the installers
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Check the tag and run the tests
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches the app version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          APP_VERSION=$(sed -nE 's/^appVersion=(.+)$/\1/p' gradle.properties | head -1 | tr -d '\r')
+          echo "tag=$TAG_VERSION  appVersion=$APP_VERSION"
+          # a pre-release tag such as v1.2.0-rc1 is checked against 1.2.0
+          if [ "${TAG_VERSION%%-*}" != "$APP_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match appVersion $APP_VERSION in gradle.properties. Bump it, commit, and tag again."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run the tests
+        run: ./gradlew :shared:jvmTest --no-daemon
+
+  dmg:
+    name: Build DMG (${{ matrix.arch }})
+    needs: verify
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: arm64          # Apple silicon
+            runner: macos-14
+          - arch: x64            # Intel
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Package the DMG
+        run: ./gradlew :desktopApp:packageDmg --no-daemon
+
+      - name: Name the file after the tag and architecture
+        id: dmg
+        run: |
+          SRC=$(ls desktopApp/build/compose/binaries/main/dmg/*.dmg | head -1)
+          OUT="OpenRest-${GITHUB_REF_NAME#v}-macos-${{ matrix.arch }}.dmg"
+          cp "$SRC" "$OUT"
+          shasum -a 256 "$OUT" > "$OUT.sha256"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.arch }}
+          path: |
+            ${{ steps.dmg.outputs.file }}
+            ${{ steps.dmg.outputs.file }}.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: dmg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## Install (macOS)
+
+            1. Download the DMG for your Mac: **arm64** for Apple silicon (M1 and later), **x64** for Intel.
+            2. Open it and drag **OpenRest** to Applications.
+            3. The app is not code-signed yet. The first time, right-click it and choose **Open**.
+
+            Checksums are attached as `.sha256` files.

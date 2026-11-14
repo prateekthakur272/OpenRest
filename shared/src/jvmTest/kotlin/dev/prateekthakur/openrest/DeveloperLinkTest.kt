@@ -22,17 +22,17 @@ class DeveloperLinkTest {
         val state = AppState(CoroutineScope(Dispatchers.Default)); state.updateSettings(AppSettings())
         setContent { OpenRestApp(state) }; waitForIdle()
         onNodeWithTag("developer-github").assertExists().assertHasClickAction()
-        assertTrue(AppInfo.DEVELOPER_URL.startsWith("https://github.com/") && AppInfo.REPO_URL.startsWith(AppInfo.DEVELOPER_URL + "/"))
+        assertTrue(BuildConfig.DEVELOPER_URL.startsWith("https://github.com/") && BuildConfig.HOMEPAGE.startsWith(BuildConfig.DEVELOPER_URL + "/"))
         val help = AppMenus.build(state, isMac = true, quit = {}, minimize = {}).first { it.label == "Help" }
         (help.items.filterIsInstance<MenuItemSpec>().first { it.label == "Developer…" }).action(); waitForIdle()
         assertEquals(Modal.Developer, state.modal); state.modal = null; waitForIdle()
         onNodeWithTag("developer-github").performClick(); waitForIdle()                    // the button opens the dialog, not the browser
         assertEquals(Modal.Developer, state.modal)
-        onNodeWithText(AppInfo.DEVELOPER_NAME).assertExists()
-        onNodeWithText(AppInfo.DEVELOPER_URL).assertExists(); onNodeWithText(AppInfo.REPO_URL).assertExists()
+        onNodeWithText(BuildConfig.VENDOR).assertExists()
+        onNodeWithText(BuildConfig.DEVELOPER_URL).assertExists(); onNodeWithText(BuildConfig.HOMEPAGE).assertExists()
         onNodeWithTag("developer-repo-open").assertHasClickAction(); onNodeWithTag("developer-profile-open").assertHasClickAction()
         onNodeWithTag("developer-repo-copy").performClick(); waitForIdle()
-        assertEquals(AppInfo.REPO_URL, Platform.paste())                                    // copy puts the link on the clipboard
+        assertEquals(BuildConfig.HOMEPAGE, Platform.paste())                                    // copy puts the link on the clipboard
         val img = onAllNodes(isRoot()).onFirst().captureToImage()
         File(System.getProperty("shots") ?: "build/shots").also { it.mkdirs() }.resolve("developer-dialog.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(img.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)!!.bytes)
     }

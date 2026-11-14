@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.buildConfig)
 }
 
 kotlin {
@@ -25,6 +26,22 @@ kotlin {
             implementation(compose.desktop.currentOs)
         }
     }
+}
+
+// BuildConfig: constants generated at build time from gradle.properties (like Android's BuildConfig), so the app and the installer share one source.
+val appVersion: String by project
+val appVendor: String by project
+val appDescription: String by project
+val appHomepage: String by project
+val appDeveloperUrl: String by project
+buildConfig {
+    packageName("dev.prateekthakur.openrest")
+    className("BuildConfig")
+    buildConfigField("VERSION", appVersion)
+    buildConfigField("VENDOR", appVendor)
+    buildConfigField("DESCRIPTION", appDescription)
+    buildConfigField("HOMEPAGE", appHomepage)
+    buildConfigField("DEVELOPER_URL", appDeveloperUrl)
 }
 
 tasks.withType<Test>().configureEach {

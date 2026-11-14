@@ -27,16 +27,36 @@ All settings are in `desktopApp/build.gradle.kts`:
 | Setting | Meaning |
 |---|---|
 | `packageName` | The app's label: `OpenRest.app`, the Dock, the menu bar, the installer name |
-| `packageVersion` | The installer version. Keep it equal to `AppInfo.VERSION` (a test checks this) |
+| `appVersion`, `appVendor`, `appDescription`, `appHomepage`, `appDeveloperUrl` | App metadata, set in `gradle.properties`. They become the installer's version, vendor and description, and the build also generates a `BuildConfig` object from them (`BuildConfig.VERSION`, `VENDOR`, `DESCRIPTION`, `HOMEPAGE`, `DEVELOPER_URL`) that the app uses for the About and Developer dialogs |
 | `macOS { bundleID }` | The macOS identity. Do not change it after a release; settings and installs follow it |
 | `iconFile` | `desktopApp/icons/icon.icns` (macOS), `icon.ico` (Windows), `icon.png` (Linux) |
 
 ## Releasing a new version
 
-1. Update `packageVersion` in `desktopApp/build.gradle.kts` and `AppInfo.VERSION` in `features/shell/Menus.kt`.
-2. Run `./gradlew :shared:jvmTest`.
-3. Build the installer on each target system.
-4. Tag the commit and attach the installers to the release.
+1. Update `appVersion` in `gradle.properties`.
+2. Commit and push to `main`.
+3. Push a tag that matches the version, with a leading `v`:
+
+   ```bash
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+
+4. The **Release (macOS)** workflow (`.github/workflows/release-macos.yml`) does the rest, see below.
+
+### The release pipeline
+
+Pushing a `v*` tag runs three jobs:
+
+| Job | What it does |
+|---|---|
+| **verify** | Fails early if the tag does not match `appVersion`, then runs `./gradlew :shared:jvmTest` |
+| **dmg** | Builds the DMG on an Apple-silicon runner (`arm64`) and an Intel runner (`x64`), names each `OpenRest-<version>-macos-<arch>.dmg` and writes a `.sha256` checksum |
+| **release** | Creates the GitHub release for the tag, with generated release notes and every DMG and checksum attached |
+
+A tag with a hyphen, such as `v1.1.0-rc1`, is published as a **pre-release**; it is checked against `1.1.0`. If a run fails, fix the cause, delete the tag (`git push origin :refs/tags/v1.0.1`, `git tag -d v1.0.1`) and tag again.
+
+You can rehearse the build without publishing by running the **dmg** steps locally (`./gradlew :desktopApp:packageDmg`).
 
 The installers are **not signed or notarised** yet. macOS users may need to right-click ▸ **Open** the first time, and Windows may show a SmartScreen warning. Signing needs a developer certificate; it can be added to the `nativeDistributions` block.
 
