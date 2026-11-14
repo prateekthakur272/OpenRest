@@ -37,30 +37,33 @@ The same module also generates a `BuildConfig` object from them (`APP_NAME`, `BU
 
 ## Releasing a new version
 
+Releases are made by hand.
+
 1. Update `appVersion` in `desktopApp/build.gradle.kts`.
-2. Commit and push to `main`.
-3. Push a tag that matches the version, with a leading `v`:
+2. Run the tests and build the installer on a Mac:
 
    ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
+   ./gradlew clean :shared:jvmTest :desktopApp:packageDmg
    ```
 
-4. The **Release (macOS)** workflow (`.github/workflows/release-macos.yml`) does the rest, see below.
+3. Copy the DMG to a clearly named file and make a checksum. Use `arm64` for an Apple-silicon Mac, `x64` for an Intel one (the DMG is built for the Mac it is built on):
 
-### The release pipeline
+   ```bash
+   mkdir -p desktopApp/build/release && cd desktopApp/build/release
+   cp ../compose/binaries/main/dmg/OpenRest-<version>.dmg OpenRest-<version>-macos-arm64.dmg
+   shasum -a 256 OpenRest-<version>-macos-arm64.dmg > OpenRest-<version>-macos-arm64.dmg.sha256
+   ```
 
-Pushing a `v*` tag runs three jobs:
+4. Commit, then tag and push:
 
-| Job | What it does |
-|---|---|
-| **verify** | Fails early if the tag does not match `appVersion`, then runs `./gradlew :shared:jvmTest` |
-| **dmg** | Builds the DMG on an Apple-silicon runner (`arm64`) and an Intel runner (`x64`), names each `OpenRest-<version>-macos-<arch>.dmg` and writes a `.sha256` checksum |
-| **release** | Creates the GitHub release for the tag, with generated release notes and every DMG and checksum attached |
+   ```bash
+   git tag v<version>
+   git push origin main v<version>
+   ```
 
-A tag with a hyphen, such as `v1.1.0-rc1`, is published as a **pre-release**; it is checked against `1.1.0`. If a run fails, fix the cause, delete the tag (`git push origin :refs/tags/v1.0.1`, `git tag -d v1.0.1`) and tag again.
+5. On GitHub open **Releases ▸ Draft a new release**, choose the tag, write or generate the release notes, drag in the DMG and its `.sha256` file, and click **Publish release**.
 
-You can rehearse the build without publishing by running the **dmg** steps locally (`./gradlew :desktopApp:packageDmg`).
+Build on each kind of Mac you want to support; an Intel DMG needs an Intel Mac.
 
 The installers are **not signed or notarised** yet. macOS users may need to right-click ▸ **Open** the first time, and Windows may show a SmartScreen warning. Signing needs a developer certificate; it can be added to the `nativeDistributions` block.
 
