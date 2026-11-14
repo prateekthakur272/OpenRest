@@ -17,6 +17,7 @@ sealed interface Modal {
     data object Import : Modal
     data object Settings : Modal
     data object About : Modal
+    data object Developer : Modal
     data object Cookies : Modal
     data class NodeSettings(val collection: Path, val node: Path) : Modal
     data class Vars(val collection: Path) : Modal

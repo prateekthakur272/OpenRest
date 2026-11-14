@@ -22,6 +22,10 @@ object AppInfo {
     const val NAME = "OpenRest"
     /** Keep in step with `packageVersion` in desktopApp/build.gradle.kts. */
     const val VERSION = "1.0.0"
+    /** Developer details, shown in the dialog behind the GitHub button and Help ▸ Developer. */
+    const val DEVELOPER_NAME = "Prateek Thakur"
+    const val DEVELOPER_URL = "https://github.com/prateekthakur272"
+    const val REPO_URL = "https://github.com/prateekthakur272/OpenRest"
     const val TAGLINE = "An open, file-based API client — requests, environments and workflows that live in plain folders."
 }
 
@@ -161,6 +165,7 @@ object AppMenus {
         val help = MenuSpec("Help", buildList {
             add(item("Welcome Tour") { state.modal = Modal.Onboarding })
             add(item("Keyboard Shortcuts") { state.prefsSection = "Shortcuts"; state.modal = Modal.Settings })
+            add(item("Developer…") { state.modal = Modal.Developer })
             add(item("Show Data Folder") { Platform.reveal(dev.prateekthakur.openrest.core.storage.AppStore.dir) })
             if (!isMac) { add(MenuSeparator); add(item("About ${AppInfo.NAME}") { state.modal = Modal.About }) }
         })

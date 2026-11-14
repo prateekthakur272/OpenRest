@@ -308,6 +308,7 @@ private fun StatusBar(state: AppState) {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBtn(Ic.Sidebar, { state.sidebarVisible = !state.sidebarVisible }, color = if (state.sidebarVisible) p.accent else p.muted, size = 15)
             IconBtn(Ic.Settings, { state.modal = Modal.Settings }, color = p.muted, size = 15)
+            IconBtn(Ic.GitHub, { state.modal = Modal.Developer }, modifier = Modifier.testTag("developer-github"), color = p.muted, size = 15)
         }
         if (col != null) {
             T(col.name, size = 11, color = p.muted, maxLines = 1)

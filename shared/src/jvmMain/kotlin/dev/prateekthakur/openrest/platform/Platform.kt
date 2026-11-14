@@ -46,6 +46,11 @@ object Platform {
         if (d.file != null) Paths.get(d.directory, d.file) else null
     } catch (_: Exception) { null }
 
+    /** Opens a web address in the default browser. */
+    fun openUrl(url: String) {
+        runCatching { if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(java.net.URI(url)) }
+    }
+
     fun reveal(p: Path) {
         runCatching { if (Desktop.isDesktopSupported()) Desktop.getDesktop().open((if (p.isDirectory()) p else p.parent).toFile()) }
     }

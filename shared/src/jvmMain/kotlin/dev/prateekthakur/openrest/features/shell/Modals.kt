@@ -2,6 +2,7 @@ package dev.prateekthakur.openrest.features.shell
 
 import dev.prateekthakur.openrest.app.*
 import dev.prateekthakur.openrest.components.*
+import dev.prateekthakur.openrest.features.developer.*
 import dev.prateekthakur.openrest.features.dialogs.*
 import dev.prateekthakur.openrest.features.onboarding.*
 import dev.prateekthakur.openrest.features.preferences.*
@@ -30,6 +31,7 @@ fun Modals(state: AppState) {
         Modal.Import -> ImportDialog(state)
         Modal.Settings -> PreferencesDialog(state)
         Modal.About -> AboutDialog(state)
+        Modal.Developer -> DeveloperDialog(state)
         Modal.Cookies -> CookiesDialog(state)
         is Modal.NodeSettings -> NodeSettingsDialog(state, m)
         is Modal.Vars -> VarsDialog(state, m)

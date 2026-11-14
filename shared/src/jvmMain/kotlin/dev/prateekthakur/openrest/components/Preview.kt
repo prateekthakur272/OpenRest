@@ -276,14 +276,33 @@ fun OptionMenu(selected: String, groups: List<List<MenuOpt>>, onSelect: (String)
     }
 }
 
+/** Switches between the rendered view (image, JSON tree, HTML) and the plain text. Independent of the format menu; dimmed when the response has no preview. */
+@Composable
+fun PreviewToggle(on: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalPal.current
+    val active = on && enabled
+    val src = remember { MutableInteractionSource() }
+    val hov by src.collectIsHoveredAsState()
+    Row(
+        modifier.clip(RoundedCornerShape(5.dp))
+            .background(if (active) p.accent.copy(alpha = 0.16f) else if (hov && enabled) p.hover else p.field)
+            .border(1.dp, if (active) p.accent.copy(alpha = 0.6f) else p.border, RoundedCornerShape(5.dp))
+            .hoverable(src).clickable(enabled = enabled) { onChange(!on) }
+            .pointerHoverIcon(if (enabled) androidx.compose.ui.input.pointer.PointerIcon.Hand else androidx.compose.ui.input.pointer.PointerIcon.Default)
+            .height(CONTROL_H).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Ico(if (active) Ic.Eye else Ic.EyeOff, tint = if (active) p.accent else p.muted.copy(alpha = if (enabled) 1f else 0.5f), size = 16.dp)
+        T("Preview", color = if (active) p.accent else if (enabled) p.text else p.muted.copy(alpha = 0.6f), weight = FontWeight.Medium)
+    }
+}
+
 @Composable
 fun FormatMenu(
     current: String,
-    preview: Boolean,
-    previewEnabled: Boolean,
     onFormat: (String) -> Unit,
-    onPreview: (Boolean) -> Unit,
-    formats: List<String> = TEXT_FORMATS,
+    textFormats: List<String> = TEXT_FORMATS,
+    rawFormats: List<String> = BINARY_FORMATS,
     modifier: Modifier = Modifier,
 ) {
     val p = LocalPal.current
@@ -296,21 +315,15 @@ fun FormatMenu(
         ) {
             Ico(formatIcon(current), tint = p.accent, size = 16.dp)
             T(current, weight = FontWeight.Medium)
-            if (preview) Box(Modifier.clip(RoundedCornerShape(4.dp)).background(p.accent.copy(alpha = 0.18f)).padding(horizontal = 5.dp, vertical = 1.dp)) { T("Preview", color = p.accent, size = 10, weight = FontWeight.SemiBold) }
             Ico(Ic.DropDown, tint = p.muted, size = 16.dp)
         }
         androidx.compose.material3.DropdownMenu(
             expanded = open, onDismissRequest = { open = false }, containerColor = p.panel, shape = RoundedCornerShape(10.dp),
             modifier = Modifier.width(176.dp), offset = androidx.compose.ui.unit.DpOffset(0.dp, 4.dp),
         ) {
-            Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 10.dp).height(32.dp), verticalAlignment = Alignment.CenterVertically) {
-                T("Preview", color = if (previewEnabled) p.text else p.muted, size = 13, weight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                Toggle(preview && previewEnabled, onPreview, previewEnabled)
-            }
-            Box(Modifier.fillMaxWidth().padding(vertical = 3.dp).height(1.dp).background(p.border))
-            formats.forEach { f -> FormatRow(f, f == current) { open = false; onFormat(f) } }
-            Box(Modifier.fillMaxWidth().padding(vertical = 3.dp).height(1.dp).background(p.border))
-            BINARY_FORMATS.forEach { f -> FormatRow(f, f == current) { open = false; onFormat(f) } }
+            textFormats.forEach { f -> FormatRow(f, f == current) { open = false; onFormat(f) } }
+            if (textFormats.isNotEmpty() && rawFormats.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 3.dp).height(1.dp).background(p.border))
+            rawFormats.forEach { f -> FormatRow(f, f == current) { open = false; onFormat(f) } }
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.io.path.writeBytes
@@ -157,6 +158,9 @@ private fun ResponseBody(state: AppState, tab: RequestTab, result: ExecResult, r
     }
 }
 
+/** Content types that are text. Anything else with a content type (zip, octet-stream, fonts, ...) is treated as a file. */
+private val TEXT_TYPE = Regex("text/|json|xml|html|javascript|ecmascript|yaml|x-www-form-urlencoded|graphql|csv|svg|markdown|x-sh|x-httpd")
+
 private fun extFor(ct: String) = when {
     ct.contains("json") -> ".json"
     ct.contains("html") -> ".html"
@@ -176,7 +180,9 @@ private fun BodyView(state: AppState, tab: RequestTab, res: HttpResult) {
     val ct = res.contentType.lowercase()
     val isImage = ct.startsWith("image/") && !ct.contains("svg")
     val isDoc = ct.contains("pdf") || ct.startsWith("audio/") || ct.startsWith("video/")
-    val isBinary = !isImage && !isDoc && res.body.take(2000).any { it.toInt() == 0 }
+    // anything that is not a text type (zip, octet-stream, fonts, ...) or that contains NUL bytes is a file, not text
+    val isTextType = ct.isEmpty() || TEXT_TYPE.containsMatchIn(ct)
+    val isBinary = !isImage && !isDoc && (!isTextType || res.body.take(2000).any { it.toInt() == 0 })
     val isMedia = isDoc || isBinary
     val text = remember(res) { if (isImage || isMedia) "" else res.text }
     val parsed = remember(res) { if (text.length < 8_000_000 && (ct.contains("json") || text.trimStart().let { it.startsWith("{") || it.startsWith("[") })) Json.tryParse(text) else null }
@@ -185,8 +191,11 @@ private fun BodyView(state: AppState, tab: RequestTab, res: HttpResult) {
     val isHtml = ct.contains("html") || (!isJson && !isXml && text.trimStart().take(200).lowercase().let { it.startsWith("<!doctype html") || it.startsWith("<html") })
     val isJs = ct.contains("javascript") || ct.contains("ecmascript")
 
-    val allFormats = TEXT_FORMATS + BINARY_FORMATS
-    val detected = when { isImage || isMedia -> "Hex"; isJson -> "JSON"; isHtml -> "HTML"; isXml -> "XML"; isJs -> "JavaScript"; else -> "Raw" }
+    // only offer what the response really is: a file gets Raw, Hex and Base64, text gets its own format plus those three
+    val textFormats = when { isImage || isMedia -> emptyList(); isJson -> listOf("JSON"); isHtml -> listOf("HTML"); isXml -> listOf("XML"); isJs -> listOf("JavaScript"); else -> emptyList() }
+    val rawFormats = BINARY_FORMATS                                                  // Raw, Hex, Base64 for every response
+    val allFormats = textFormats + rawFormats
+    val detected = when { isImage || isMedia -> "Hex"; textFormats.isNotEmpty() -> textFormats.first(); else -> "Raw" }
     val fmt = if (tab.resView in allFormats) tab.resView else detected
     val previewable = isImage || isMedia || (fmt == "JSON" && isJson) || (fmt == "HTML" && isHtml)
     val preview = previewable && (tab.resPreview ?: (isImage || isMedia))
@@ -199,7 +208,7 @@ private fun BodyView(state: AppState, tab: RequestTab, res: HttpResult) {
             "XML" -> if (isXml || text.trimStart().startsWith("<")) runCatching { prettyXml(text) }.getOrDefault(text) else text
             "Hex" -> hexDump(res.body)
             "Base64" -> base64Wrapped(res.body.let { if (it.size > 2_000_000) it.copyOf(2_000_000) else it })
-            else -> text
+            else -> if (text.isEmpty() && res.size > 0) res.text.take(2_000_000) else text       // Raw: files have no decoded text above, so decode the bytes here
         }
     }
     val lang = when (fmt) { "JSON" -> if (isJson) "json" else "text"; "HTML", "XML" -> "xml"; "JavaScript" -> "js"; else -> "text" }
@@ -208,11 +217,8 @@ private fun BodyView(state: AppState, tab: RequestTab, res: HttpResult) {
     var cur by remember(tab.find, shown) { mutableStateOf(0) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormatMenu(
-                current = fmt, preview = preview, previewEnabled = previewable,
-                onFormat = { tab.resView = it; if (it in BINARY_FORMATS) tab.resPreview = false },
-                onPreview = { tab.resPreview = it },
-            )
+            FormatMenu(current = fmt, onFormat = { tab.resView = it; if (it in BINARY_FORMATS) tab.resPreview = false }, textFormats = textFormats, rawFormats = rawFormats)
+            PreviewToggle(on = preview, enabled = previewable, onChange = { tab.resPreview = it }, modifier = Modifier.testTag("preview-toggle"))
             if (jsonMode && !isMedia) Field(tab.filter, { tab.filter = it }, Modifier.weight(1f), placeholder = "Filter  e.g.  \$.data.items[0].name", mono = true, highlightVars = false)
             else Spacer(Modifier.weight(1f))
             if (preview && jsonMode) {
