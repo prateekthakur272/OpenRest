@@ -45,6 +45,8 @@ compose.desktop {
         // macOS labels the Dock and the menu bar after the Java process unless told otherwise (matters for `run`; a packaged app uses its Info.plist)
         jvmArgs += listOf("-Xdock:name=$appName", "-Dapple.awt.application.name=$appName")
 
+        buildTypes.release.proguard { isEnabled.set(false) }
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = appName                            // the app's label: OpenRest.app, the Dock, the menu bar, the DMG
