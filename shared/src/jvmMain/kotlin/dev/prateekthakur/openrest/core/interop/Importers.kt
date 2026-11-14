@@ -385,6 +385,7 @@ object Importers {
     // ---------------- Bruno folder -> OpenRest ----------------
 
     fun importBruno(src: Path, parent: Path): Path {
+        if (OpenCollectionImporter.isOpenCollection(src)) return OpenCollectionImporter.import(src, parent)          // the newer YAML layout
         val meta = runCatching { Json.obj(Json.parse(src.resolve("bruno.json").readText())) }.getOrNull()
         val name = meta?.get("name") as? String ?: src.name
         val dir = newCollectionDir(parent, name)

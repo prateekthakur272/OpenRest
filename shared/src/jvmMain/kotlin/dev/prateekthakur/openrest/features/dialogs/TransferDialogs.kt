@@ -75,7 +75,7 @@ internal fun ImportDialog(state: AppState) {
                 "cURL" -> "Adds the request to the currently selected collection."
                 "Postman Environment" -> "Adds the environment to the currently selected collection."
                 "Postman Environment (Global)" -> "Adds a global environment, available to every collection."
-                "Bruno Collection (folder)" -> "Converts a Bruno collection (bruno.json + .bru files) into a new OpenRest YAML collection."
+                "Bruno Collection (folder)" -> "Converts a Bruno collection (.bru files with bruno.json, or the newer YAML layout with opencollection.yml) into a new OpenRest collection."
                 "OpenRest Collection (folder)" -> "Opens an existing OpenRest collection folder (contains openrest.yaml)."
                 "OpenRest Bundle (YAML)" -> "Creates a collection from a single-file bundle exported by OpenRest."
                 "OpenAPI / Swagger" -> "JSON or YAML. Requests are grouped by tag; the server URL becomes {{baseUrl}} in a Default environment."

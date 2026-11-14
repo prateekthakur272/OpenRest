@@ -12,7 +12,7 @@
 | Postman environment | Into the current collection, or as a global environment |
 | Insomnia | v4 export |
 | OpenAPI / Swagger | JSON or YAML. Requests are grouped by tag; the server URL becomes `{{baseUrl}}` in a **Default** environment |
-| Bruno collection | Pick the folder (`bruno.json` + `.bru` files); it is converted into an OpenRest collection |
+| Bruno collection | Pick the collection folder. Both Bruno layouts work: `.bru` files with `bruno.json`, and the newer YAML layout with `opencollection.yml` and one `.yml` per request. It is converted into an OpenRest collection, including folders, headers, params, bodies, auth, scripts, assertions and environments |
 | cURL | Paste one command, or paste a `curl …` into any URL bar |
 | OpenRest bundle / collection | A single-file bundle or a collection folder |
 
