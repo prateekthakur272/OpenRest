@@ -2,7 +2,7 @@
 #
 #   git tag v1.0.1 && git push origin v1.0.1
 #
-# The tag must match `appVersion` in gradle.properties; the run stops early if it does not.
+# The tag must match `appVersion` in desktopApp/build.gradle.kts; the run stops early if it does not.
 name: Release (macOS)
 
 on:
@@ -27,11 +27,11 @@ jobs:
       - name: Tag matches the app version
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          APP_VERSION=$(sed -nE 's/^appVersion=(.+)$/\1/p' gradle.properties | head -1 | tr -d '\r')
+          APP_VERSION=$(sed -nE 's/^val appVersion = "([^"]+)".*/\1/p' desktopApp/build.gradle.kts | head -1)
           echo "tag=$TAG_VERSION  appVersion=$APP_VERSION"
           # a pre-release tag such as v1.2.0-rc1 is checked against 1.2.0
           if [ "${TAG_VERSION%%-*}" != "$APP_VERSION" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match appVersion $APP_VERSION in gradle.properties. Bump it, commit, and tag again."
+            echo "::error::Tag $GITHUB_REF_NAME does not match appVersion $APP_VERSION in desktopApp/build.gradle.kts. Bump it, commit, and tag again."
             exit 1
           fi
 

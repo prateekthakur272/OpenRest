@@ -159,16 +159,15 @@ class MenuTest {
         assertNull(s.prefsSection)
         s.modal = null; waitForIdle()
         AppMenus.build(s, isMac = false).item("About OpenRest").action(); waitForIdle()
-        onNodeWithText("Version ${BuildConfig.VERSION}").assertExists()
+        onNodeWithText("Version ${AppInfo.VERSION}").assertExists()
     }
 
-    @Test fun buildConfigMatchesGradleProperties() {
-        val root = java.io.File("../gradle.properties").takeIf { it.exists() } ?: java.io.File("gradle.properties")
-        if (!root.exists()) return
-        val p = java.util.Properties().apply { root.reader().use { load(it) } }
-        assertEquals(p.getProperty("appVersion"), BuildConfig.VERSION)
-        assertTrue(Regex("""\d+\.\d+\.\d+""").matches(BuildConfig.VERSION), "appVersion must be x.y.z")
-        assertEquals(p.getProperty("appVendor"), BuildConfig.VENDOR); assertEquals(p.getProperty("appDescription"), BuildConfig.DESCRIPTION)
-        assertEquals(p.getProperty("appHomepage"), BuildConfig.HOMEPAGE); assertEquals(p.getProperty("appDeveloperUrl"), BuildConfig.DEVELOPER_URL)
+    @Test fun appInfoIsFilledInByTheAppModule() {
+        val before = AppInfo.meta
+        try {
+            assertEquals("OpenRest", AppInfo.NAME); assertEquals("dev", AppInfo.VERSION)            // defaults, as seen by tests and previews
+            AppInfo.meta = AppMetadata(name = "Demo", bundleId = "x.y", version = "2.3.4", vendor = "V")
+            assertEquals("Demo", AppInfo.NAME); assertEquals("x.y", AppInfo.BUNDLE_ID); assertEquals("2.3.4", AppInfo.VERSION); assertEquals("V", AppInfo.VENDOR)
+        } finally { AppInfo.meta = before }
     }
 }

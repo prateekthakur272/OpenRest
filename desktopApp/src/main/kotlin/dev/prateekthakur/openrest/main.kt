@@ -30,6 +30,7 @@ import androidx.compose.ui.window.rememberWindowState
 import dev.prateekthakur.openrest.app.AppState
 import dev.prateekthakur.openrest.platform.Platform
 import dev.prateekthakur.openrest.features.shell.AppInfo
+import dev.prateekthakur.openrest.features.shell.AppMetadata
 import dev.prateekthakur.openrest.features.shell.AppMenus
 import dev.prateekthakur.openrest.features.shell.MenuEntry
 import dev.prateekthakur.openrest.features.shell.MenuItemSpec
@@ -43,6 +44,7 @@ import dev.prateekthakur.openrest.features.shell.handleKey
 import dev.prateekthakur.openrest.features.shell.installMacAppMenu
 
 fun main() {
+    AppInfo.meta = AppMetadata(BuildConfig.APP_NAME, BuildConfig.BUNDLE_ID, BuildConfig.VERSION, BuildConfig.VENDOR, BuildConfig.DESCRIPTION, BuildConfig.HOMEPAGE, BuildConfig.DEVELOPER_URL)
     // macOS shows this in the menu bar and the Dock instead of the Java class name
     System.setProperty("apple.awt.application.name", AppInfo.NAME)
     application {

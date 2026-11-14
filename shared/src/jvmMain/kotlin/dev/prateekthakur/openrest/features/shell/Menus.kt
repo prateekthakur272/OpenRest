@@ -9,8 +9,6 @@ import dev.prateekthakur.openrest.core.run.*
 import dev.prateekthakur.openrest.platform.*
 import dev.prateekthakur.openrest.theme.*
 
-import dev.prateekthakur.openrest.BuildConfig
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,8 +18,28 @@ import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+/** What the app module knows about the app, like Android's `applicationId` and `versionName`. */
+data class AppMetadata(
+    val name: String = "OpenRest",
+    val bundleId: String = "",
+    val version: String = "dev",
+    val vendor: String = "",
+    val description: String = "",
+    val homepage: String = "",
+    val developerUrl: String = "",
+)
+
 object AppInfo {
-    const val NAME = "OpenRest"
+    /** Set once at startup by the app module (from its generated BuildConfig). The defaults are what tests and previews see. */
+    var meta: AppMetadata = AppMetadata()
+
+    val NAME get() = meta.name
+    val BUNDLE_ID get() = meta.bundleId
+    val VERSION get() = meta.version
+    val VENDOR get() = meta.vendor
+    val DESCRIPTION get() = meta.description
+    val HOMEPAGE get() = meta.homepage
+    val DEVELOPER_URL get() = meta.developerUrl
     const val TAGLINE = "An open, file-based API client — requests, environments and workflows that live in plain folders."
 }
 
@@ -188,8 +206,8 @@ fun AboutDialog(state: AppState) {
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Ico(Ic.Logo, tint = p.accent, size = 56.dp)
             T(AppInfo.NAME, size = 22, weight = FontWeight.Bold)
-            T("Version ${BuildConfig.VERSION}", color = p.muted, size = 12)
-            if (BuildConfig.VENDOR.isNotBlank()) T("by ${BuildConfig.VENDOR}", color = p.muted, size = 12)
+            T("Version ${AppInfo.VERSION}", color = p.muted, size = 12)
+            if (AppInfo.VENDOR.isNotBlank()) T("by ${AppInfo.VENDOR}", color = p.muted, size = 12)
             Spacer(Modifier.height(6.dp))
             T(AppInfo.TAGLINE, color = p.muted, size = 12, modifier = Modifier.padding(horizontal = 12.dp))
             Spacer(Modifier.height(6.dp))

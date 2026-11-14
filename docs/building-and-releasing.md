@@ -22,18 +22,22 @@
 ./gradlew :desktopApp:packageDeb   # Linux     → …/deb/
 ```
 
-All settings are in `desktopApp/build.gradle.kts`:
+The values are `val`s near the top of `desktopApp/build.gradle.kts`, the way an Android app keeps `applicationId` and `versionName` in its app module:
 
 | Setting | Meaning |
 |---|---|
-| `packageName` | The app's label: `OpenRest.app`, the Dock, the menu bar, the installer name |
-| `appVersion`, `appVendor`, `appDescription`, `appHomepage`, `appDeveloperUrl` | App metadata, set in `gradle.properties`. They become the installer's version, vendor and description, and the build also generates a `BuildConfig` object from them (`BuildConfig.VERSION`, `VENDOR`, `DESCRIPTION`, `HOMEPAGE`, `DEVELOPER_URL`) that the app uses for the About and Developer dialogs |
-| `macOS { bundleID }` | The macOS identity. Do not change it after a release; settings and installs follow it |
+| `appName` | The app's label: `OpenRest.app`, the Dock, the menu bar, the installer name (`packageName`) |
+| `appBundleId` | The macOS identity (`bundleID`). Do not change it after a release; settings and installs follow it |
+| `appVersion`, `appVendor`, `appDescription` | The installer's version, vendor and description |
+| `appHomepage`, `appDeveloperUrl` | Links shown in the Developer dialog |
 | `iconFile` | `desktopApp/icons/icon.icns` (macOS), `icon.ico` (Windows), `icon.png` (Linux) |
+
+The same module also generates a `BuildConfig` object from them (`APP_NAME`, `BUNDLE_ID`, `VERSION`, `VENDOR`, `DESCRIPTION`, `HOMEPAGE`, `DEVELOPER_URL`). `main()` copies it into `AppInfo.meta`, which the shared UI reads for the About and Developer dialogs.
+
 
 ## Releasing a new version
 
-1. Update `appVersion` in `gradle.properties`.
+1. Update `appVersion` in `desktopApp/build.gradle.kts`.
 2. Commit and push to `main`.
 3. Push a tag that matches the version, with a leading `v`:
 
