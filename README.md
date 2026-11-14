@@ -1,87 +1,105 @@
-# OpenRest
+<h1 align="center">OpenRest</h1>
 
-An open-source desktop API client (Postman / Bruno style) built with Kotlin + Compose Desktop.
-Collections are **plain folders of YAML files**, so they diff cleanly in git, and can be exported to
-Postman, Bruno, OpenAPI/Swagger, Insomnia and more.
+<p align="center">
+  An open, file-based API client for the desktop. Requests, environments and workflows live in plain folders you own.<br>
+  Built with Kotlin and Compose Multiplatform. Runs on macOS, Windows and Linux.
+</p>
 
-## File format
+<p align="center">
+  <img src="docs/screenshots/request-response.png" alt="OpenRest showing a request and its response" width="900">
+</p>
+
+## Why OpenRest
+
+- **Your data stays yours.** Collections are folders of YAML files. They diff cleanly, review well in pull requests and live in git next to your code. Nothing is sent anywhere except the requests you run.
+- **Workflows, not just requests.** Chain requests together with loops, conditions and values passed from one step to the next, built visually.
+- **Bring your work with you.** Import from Postman, Insomnia, Bruno, OpenAPI and cURL, and export back out to the same formats.
+- **Fast and keyboard friendly.** A command palette, variable autocomplete in every field and shortcuts for everything you do often.
+
+## Features at a glance
+
+| | |
+|---|---|
+| **Requests** | All HTTP methods, query and path parameters, headers, JSON / text / XML / GraphQL / form / multipart / file bodies, and Basic, Bearer, API key, Digest and OAuth 2 auth |
+| **Collections** | Nested folders with shared headers, auth, variables and scripts that every request inside inherits |
+| **Environments** | Global and per-collection environments, secret variables kept out of your files, `{{variable}}` highlighting and autocomplete |
+| **Workflows** | A visual builder: request steps, if / else, loops, counters and sums, waits, stops, with `{name}` values passed between steps and a run log |
+| **Scripting** | JavaScript before and after each request, no-code assertions, and `test()` / `expect()` tests |
+| **Response viewer** | Pretty JSON and XML, search, JSONPath filter, headers, cookies, timeline, tests, console, image preview and a response history with diff |
+| **Runner** | Run a whole collection or one folder, with iterations, delays and stop-on-failure |
+| **Code generation** | cURL, JavaScript, Node.js, Python, Java, Kotlin, Go, PHP, C#, Ruby, Swift, Rust, Dart, PowerShell and more |
+| **Import / export** | Postman, Insomnia, Bruno, OpenAPI / Swagger, cURL, `.http` files and OpenRest bundles |
+| **Desktop polish** | System, light and dark themes, native menus, custom Windows and Linux title bar, first-run walkthrough, zoom, draggable tabs |
+
+See [docs/features.md](docs/features.md) for the full tour with screenshots.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Workflow builder](docs/screenshots/workflow-run-log.png) | ![Collection runner](docs/screenshots/runner.png) |
+| **Workflow builder** with its run log | **Collection runner** |
+| ![Command palette](docs/screenshots/command-palette.png) | ![Light theme, side by side](docs/screenshots/light-side-by-side.png) |
+| **Command palette** (⌘K / Ctrl+K) | **Light theme**, side-by-side layout |
+
+## Quick start
+
+You need **JDK 17 or newer**.
+
+```bash
+git clone <this repository>
+cd OpenRest
+./gradlew :desktopApp:run
+```
+
+On first launch a short walkthrough helps you create, open or import a collection. To build an installer instead, run `./gradlew :desktopApp:packageDmg` (macOS), `packageMsi` (Windows) or `packageDeb` (Linux). More in [docs/getting-started.md](docs/getting-started.md) and [docs/building-and-releasing.md](docs/building-and-releasing.md).
+
+## A collection is just a folder
 
 ```
 my-api/
-  openrest.yaml          # collection: name, auth, headers, vars, scripts, tests, docs
-  environments/dev.yaml  # variables (secret values are stored outside the file)
+  openrest.yaml          # collection: name, auth, headers, variables, scripts
+  environments/dev.yaml  # variables for an environment
+  workflows/Checkout.yaml
   Ping.yaml              # a request
   Users/
-    folder.yaml          # folder-level headers, auth, vars, scripts
+    folder.yaml          # folder-level headers, auth, variables, scripts
     Get user.yaml
 ```
 
 ```yaml
 name: Get user
-seq: 1
 method: GET
 url: '{{baseUrl}}/users/:id?verbose=true'
-params:
-  query: [{name: verbose, value: 'true'}]
-  path:  [{name: id, value: '7'}]
 headers:
 - {name: Accept, value: application/json}
-body:
-  type: json            # none | json | text | xml | graphql | formUrlEncoded | multipartForm | file
-  json: |-
-    {"name": "Ada"}
-auth: {type: bearer, token: '{{token}}'}   # omitted = inherit from folder/collection
-vars:  {pre: [], post: [{name: id, value: res.body.id}]}
+auth: {type: bearer, token: '{{token}}'}
 assertions: [{name: res.status, value: eq 200}]
-scripts: {pre: "req.setHeader('X-A', '1')"}
-tests: |-
-  test('ok', () => expect(res.status).to.equal(200));
 ```
 
-## Run
+The full format is described in [docs/file-format.md](docs/file-format.md).
 
-```bash
-./gradlew :desktopApp:run                 # launch
-./gradlew :shared:jvmTest                 # core + headless UI tests
-./gradlew :desktopApp:packageDmg          # or packageMsi / packageDeb
-```
+## Documentation
 
-Requires JDK 17+.
+| Guide | What it covers |
+|---|---|
+| [Getting started](docs/getting-started.md) | Install, first run, your first request |
+| [Features](docs/features.md) | Everything OpenRest can do, with screenshots |
+| [Environments and variables](docs/environments-and-variables.md) | `{{variables}}`, scopes, secrets, dynamic values |
+| [Workflows](docs/workflows.md) | The visual workflow builder in depth |
+| [Scripting and testing](docs/scripting-and-testing.md) | Scripts, assertions, tests, the runner |
+| [Import and export](docs/import-export.md) | Moving between OpenRest and other tools |
+| [File format](docs/file-format.md) | The YAML on disk |
+| [Keyboard shortcuts](docs/keyboard-shortcuts.md) | Every shortcut |
+| [Project structure](docs/project-structure.md) | How the source code is organised |
+| [Building and releasing](docs/building-and-releasing.md) | Run, test, package, regenerate screenshots |
+| [Contributing](docs/contributing.md) | How to help, coding conventions, pull requests |
+| [Troubleshooting](docs/troubleshooting.md) | Common problems and where your data lives |
 
-## Features
+## Contributing
 
-- **Requests**: all HTTP methods, query + path (`:id`) params kept in sync with the URL, headers, auth
-  (Basic, Bearer, API key, Digest, OAuth2 client-credentials/password, inherit from folder/collection)
-- **Bodies**: JSON, Text, XML, GraphQL (query + variables), Form URL-encoded, Multipart (text + files), raw file
-- **Collections as folders**: nested folders, `collection.bru` / `folder.bru` shared headers, auth, vars, scripts, tests
-- **Environments** with secret variables (kept out of the files), collection / folder / request / runtime vars,
-  `{{var}}` highlighting (green = defined, red = missing), `{{$guid}}`, `{{$timestamp}}`, `{{process.env.X}}` (`.env` supported)
-- **Scripting** (GraalJS, async/await ok): `bru.*`, `req.*`, `res.*`, `console`, chai-style `expect`, `test()`
-- **Assertions** (`res.status  eq 200`, 25 operators) and **post-response variables**
-- **Response viewer**: pretty JSON / XML, raw, image preview, JSONPath filter, headers, cookies, timeline, tests, console, save / copy
-- **Code generation**: cURL, fetch, axios, Node, Python, Java, Kotlin, Go, PHP, C#, Ruby, Swift, Rust, Dart, PowerShell, HTTPie, wget
-- **Collection runner** for a whole collection or one folder (stop on failure, delay, skip/stop/setNextRequest)
-- **Import**: Postman collections + environments, Insomnia, OpenAPI/Swagger (JSON or YAML), cURL (also paste a `curl …` into the URL bar), Bruno folders (converted), OpenRest bundles
-- **Export** (collection menu → Export…): Postman v2.1, Bruno (`.bru` folder), OpenAPI 3 / Swagger (YAML or JSON), Insomnia v4, `.http` file (VS Code / JetBrains), cURL shell script, single-file OpenRest bundle
-- Cookie jar, proxy, SSL verify toggle, redirects, timeouts, light/dark theme, split layout toggle
-- **Developer UX**: command palette (`⌘/Ctrl+K`) for any request or action, `{{variable}}` autocomplete in every field
-  (env, collection, folder, runtime vars and `{{$guid}}`-style dynamic ones), request history with full responses,
-  status bar, tab context menus (middle-click closes), bulk edit for headers / params / variables, auto-save option,
-  stacked or side-by-side layout, resolved-URL preview with undefined-variable warnings, live JSON validation,
-  response search, response history with a side-by-side diff, script / test snippets, UI zoom (`⌘/Ctrl +/−/0`),
-  open tabs and layout restored on restart
-- **Sidebar**: drag & drop to move requests/folders or reorder requests, inline rename (`F2`), keyboard navigation
-  (`↑ ↓ ← →`, `Enter`, `F2`, `Delete`), hover quick-add, per-request status / unsaved indicators
-- Shortcuts: `⌘/Ctrl+K` palette · `+Enter` send · `+S` save · `+Shift+S` save all · `+L` focus URL · `+B` toggle sidebar ·
-  `+1…9` switch tab · `Ctrl+Tab` / `+Shift+[ ]` cycle tabs · `+Shift+C` copy as cURL · `+Shift+L` toggle layout ·
-  `+N` new request · `+W` close tab · `+,` preferences
+Bug reports, ideas and pull requests are welcome. Start with [docs/contributing.md](docs/contributing.md) and [docs/project-structure.md](docs/project-structure.md).
 
-## Layout
+## License
 
-```
-shared/src/jvmMain/kotlin/dev/prateekthakur/openrest
-  core/   Bru format, collections on disk, variables, HTTP, scripting, code-gen, importers, runner
-  app/    AppState (tabs, collections, environments, actions)
-  ui/     Compose UI (sidebar, request/response panes, dialogs)
-desktopApp/  window entry point
-```
+A license has not been chosen for this project yet.
