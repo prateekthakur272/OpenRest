@@ -20,11 +20,19 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dev.prateekthakur.openrest.app.AppState
@@ -43,6 +51,16 @@ import dev.prateekthakur.openrest.features.shell.SubMenuSpec
 import dev.prateekthakur.openrest.features.shell.handleKey
 import dev.prateekthakur.openrest.features.shell.installMacAppMenu
 
+/** True when the saved window would still show a usable part of a connected screen. */
+private fun onScreen(x: Float, y: Float, w: Float, h: Float): Boolean = runCatching {
+    val r = java.awt.Rectangle(x.toInt(), y.toInt(), w.toInt(), h.toInt())
+    java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.any { d ->
+        val i = d.defaultConfiguration.bounds.intersection(r)
+        i.width >= 120 && i.height >= 80 && y >= d.defaultConfiguration.bounds.y - 1
+    }
+}.getOrDefault(false)
+
+@OptIn(FlowPreview::class)
 fun main() {
     AppInfo.meta = AppMetadata(BuildConfig.APP_NAME, BuildConfig.BUNDLE_ID, BuildConfig.VERSION, BuildConfig.VENDOR, BuildConfig.DESCRIPTION, BuildConfig.HOMEPAGE, BuildConfig.DEVELOPER_URL)
     // macOS shows this in the menu bar and the Dock instead of the Java class name
@@ -53,9 +71,36 @@ fun main() {
             val firstRun = AppStore.isFirstRun()                      // decided before anything is saved
             AppState(scope).also { if (firstRun) it.modal = Modal.Onboarding }
         }
-        val quit = { state.persist(); exitApplication() }
         val isMac = Platform.isMac
-        val windowState = rememberWindowState(size = DpSize(1360.dp, 860.dp))
+        // reopen where the user left it; a saved position that is no longer on any screen (unplugged monitor) is dropped
+        val saved = remember { AppStore.loadWindow() }
+        val windowState = rememberWindowState(
+            size = saved?.let { DpSize(it.width.dp, it.height.dp) } ?: DpSize(1360.dp, 860.dp),
+            position = saved?.takeIf { it.x != null && it.y != null && onScreen(it.x!!, it.y!!, it.width, it.height) }?.let { WindowPosition(it.x!!.dp, it.y!!.dp) } ?: WindowPosition.PlatformDefault,
+            placement = if (saved?.maximized == true) WindowPlacement.Maximized else WindowPlacement.Floating,
+        )
+        // the floating size / position is kept while maximized, so un-maximizing returns to it
+        var floating by remember { mutableStateOf(saved) }
+        LaunchedEffect(windowState) {
+            snapshotFlow { Triple(windowState.size, windowState.position, windowState.placement) }
+                .debounce(400)
+                .collect { (size, pos, placement) ->
+                    val max = placement == WindowPlacement.Maximized
+                    if (!max && size.isSpecified && !windowState.isMinimized) {
+                        floating = AppStore.WindowGeometry(size.width.value, size.height.value, pos.takeIf { it.isSpecified }?.x?.value, pos.takeIf { it.isSpecified }?.y?.value)
+                    }
+                    floating?.let { AppStore.saveWindow(it.copy(maximized = max)) }
+                }
+        }
+        val quit = {
+            state.persist()
+            floating?.let { f ->
+                val max = windowState.placement == WindowPlacement.Maximized
+                val live = if (!max && windowState.size.isSpecified) AppStore.WindowGeometry(windowState.size.width.value, windowState.size.height.value, windowState.position.takeIf { it.isSpecified }?.x?.value, windowState.position.takeIf { it.isSpecified }?.y?.value) else f
+                AppStore.saveWindow(live.copy(maximized = max))
+            }
+            exitApplication()
+        }
         // The app's own top bar is the title bar. macOS keeps its native traffic-light buttons, floating over that bar;
         // Windows / Linux draw nothing, so the app supplies its own window buttons, drag area and resize edges.
         Window(

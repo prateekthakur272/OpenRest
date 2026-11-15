@@ -1,5 +1,6 @@
 package dev.prateekthakur.openrest.core.storage
 
+import dev.prateekthakur.openrest.core.logging.Log
 import dev.prateekthakur.openrest.core.model.*
 import dev.prateekthakur.openrest.core.model.Collection
 import dev.prateekthakur.openrest.core.run.*
@@ -13,7 +14,8 @@ import kotlin.io.path.*
 
 /** App-level persistence (~/.openrest): settings, opened collections, secrets, selected environments. */
 object AppStore {
-    val dir: Path = (System.getProperty("openrest.home")?.let { Paths.get(it) } ?: Paths.get(System.getProperty("user.home"), ".openrest")).also { it.createDirectories() }
+    val dir: Path = (System.getProperty("openrest.home")?.let { Paths.get(it) } ?: Paths.get(System.getProperty("user.home"), ".openrest")).also { it.createDirectories(); Log.writeTo(it.resolve("openrest.log")) }
+    private const val TAG = "storage"
     private val settingsFile = dir.resolve("settings.json")
     private val stateFile = dir.resolve("state.json")
     private val secretsFile = dir.resolve("secrets.json")
@@ -39,7 +41,7 @@ object AppStore {
             fontSize = (m["fontSize"] as? Number)?.toInt() ?: d.fontSize,
             autoSave = m["autoSave"] as? Boolean ?: d.autoSave,
         )
-    } catch (_: Exception) { AppSettings() }
+    } catch (e: Exception) { if (settingsFile.exists()) Log.warning(TAG, "Cannot read settings.json, using defaults", e); AppSettings() }
 
     fun saveSettings(s: AppSettings) {
         val m = linkedMapOf<String, Any?>(
@@ -48,7 +50,7 @@ object AppStore {
             "proxyHost" to s.proxyHost, "proxyPort" to s.proxyPort, "userAgent" to s.userAgent,
             "verticalLayout" to s.verticalLayout, "fontSize" to s.fontSize, "autoSave" to s.autoSave,
         )
-        runCatching { settingsFile.writeText(Json.stringify(m, true)) }
+        writeFile(settingsFile, Json.stringify(m, true))
     }
 
     data class SavedState(
@@ -56,6 +58,10 @@ object AppStore {
         val tabs: List<String> = emptyList(), val activeTab: String? = null,
         val sidebarWidth: Float = 0.22f, val splitFraction: Float = 0.45f, val sidebarVisible: Boolean = true,
         val globalEnv: String? = null,
+        val sidebarTab: String? = null,
+        /** Folders / collections that are open in the tree; null when never saved (the default expansion applies). */
+        val expandedFolders: List<String>? = null,
+        val selectedCollection: String? = null,
     )
 
     fun loadState(): SavedState = try {
@@ -69,11 +75,37 @@ object AppStore {
             (m["splitFraction"] as? Number)?.toFloat() ?: 0.45f,
             m["sidebarVisible"] as? Boolean ?: true,
             m["globalEnv"] as? String,
+            m["sidebarTab"] as? String,
+            Json.arr(m["expandedFolders"])?.mapNotNull { it as? String },
+            m["selectedCollection"] as? String,
         )
-    } catch (_: Exception) { SavedState(emptyList(), emptyMap()) }
+    } catch (e: Exception) { if (stateFile.exists()) Log.warning(TAG, "Cannot read state.json, starting empty", e); SavedState(emptyList(), emptyMap()) }
 
     fun saveState(s: SavedState) {
-        runCatching { stateFile.writeText(Json.stringify(linkedMapOf("collections" to s.collections, "envs" to s.envs, "tabs" to s.tabs, "activeTab" to s.activeTab, "sidebarWidth" to s.sidebarWidth.toDouble(), "splitFraction" to s.splitFraction.toDouble(), "sidebarVisible" to s.sidebarVisible, "globalEnv" to s.globalEnv), true)) }
+        writeFile(stateFile, Json.stringify(linkedMapOf("collections" to s.collections, "envs" to s.envs, "tabs" to s.tabs, "activeTab" to s.activeTab, "sidebarWidth" to s.sidebarWidth.toDouble(), "splitFraction" to s.splitFraction.toDouble(), "sidebarVisible" to s.sidebarVisible, "globalEnv" to s.globalEnv, "sidebarTab" to s.sidebarTab, "expandedFolders" to s.expandedFolders, "selectedCollection" to s.selectedCollection), true))
+    }
+
+    /** Last window geometry in dp. x / y are null when the position was never saved (the OS picks it). */
+    data class WindowGeometry(val width: Float, val height: Float, val x: Float? = null, val y: Float? = null, val maximized: Boolean = false)
+
+    private val windowFile = dir.resolve("window.json")
+
+    fun loadWindow(): WindowGeometry? = try {
+        val m = Json.obj(Json.parse(windowFile.readText()))!!
+        val w = (m["width"] as Number).toFloat(); val h = (m["height"] as Number).toFloat()
+        if (w < 200f || h < 150f) null
+        else WindowGeometry(w, h, (m["x"] as? Number)?.toFloat(), (m["y"] as? Number)?.toFloat(), m["maximized"] as? Boolean ?: false)
+    } catch (e: Exception) { if (windowFile.exists()) Log.warning(TAG, "Cannot read window.json, using the default size", e); null }
+
+    fun saveWindow(g: WindowGeometry) {
+        val m = linkedMapOf<String, Any?>("width" to g.width.toDouble(), "height" to g.height.toDouble(), "maximized" to g.maximized)
+        g.x?.let { m["x"] = it.toDouble() }; g.y?.let { m["y"] = it.toDouble() }
+        writeFile(windowFile, Json.stringify(m, true))
+    }
+
+    /** Writing is best effort (a read-only home must not crash the app) but a failure is always logged. */
+    private fun writeFile(file: Path, text: String) {
+        try { file.writeText(text) } catch (e: Exception) { Log.error(TAG, "Cannot write ${file.fileName}", e) }
     }
 
     private fun secretsMap(): MutableMap<String, Any?> =
@@ -87,7 +119,7 @@ object AppStore {
     fun removeSecrets(collection: Path, env: String) {
         val m = secretsMap()
         val prefix = "$collection|$env|"
-        if (m.keys.removeIf { it.startsWith(prefix) }) runCatching { secretsFile.writeText(Json.stringify(m, true)) }
+        if (m.keys.removeIf { it.startsWith(prefix) }) writeFile(secretsFile, Json.stringify(m, true))
     }
 
     /** Global environments (available to every collection) live next to settings in ~/.openrest/environments. */
@@ -99,7 +131,7 @@ object AppStore {
     fun setSecret(collection: Path, env: String, name: String, value: String) {
         val m = secretsMap()
         m[secretKey(collection, env, name)] = value
-        runCatching { secretsFile.writeText(Json.stringify(m, true)) }
+        writeFile(secretsFile, Json.stringify(m, true))
     }
 }
 

@@ -1,5 +1,6 @@
 package dev.prateekthakur.openrest.features.workflow
 
+import dev.prateekthakur.openrest.app.runWorkflow
 import dev.prateekthakur.openrest.components.*
 import dev.prateekthakur.openrest.core.model.*
 import dev.prateekthakur.openrest.core.run.*

@@ -1,5 +1,8 @@
 package dev.prateekthakur.openrest.features.shell
 
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import androidx.compose.runtime.snapshotFlow
 import dev.prateekthakur.openrest.app.*
 import dev.prateekthakur.openrest.components.*
 import dev.prateekthakur.openrest.core.http.*
@@ -82,6 +85,8 @@ fun OpenRestApp(state: AppState, chrome: WindowChrome = WindowChrome.None) {
         val focused = LocalWindowInfo.current.isWindowFocused
         var wasFocused by remember { mutableStateOf(true) }
         LaunchedEffect(focused) { if (focused && !wasFocused) state.reloadAll(); wasFocused = focused }
+        // side pane and layout changes (drag, collapse, tab, open folders) are saved as they happen, not only on quit
+        LaunchedEffect(state) { snapshotFlow { state.layoutSnapshot() }.drop(1).debounce(500).collect { state.persist() } }
         val menuOverlay = remember { MenuOverlay() }
         CompositionLocalProvider(LocalMenuOverlay provides menuOverlay) {
         Box(
@@ -156,6 +161,7 @@ private fun TopBtn(label: String, icon: androidx.compose.ui.graphics.vector.Imag
 
 /** The slim title bar above the header: it moves the window and (on Windows / Linux) carries the window buttons. */
 val TITLE_BAR_HEIGHT = 30.dp
+private val TAB_UNDERLINE = 2.dp
 
 /**
  * The window's own title bar. macOS keeps its native traffic-light buttons floating over its left end ([WindowChrome.leftInset]);
@@ -259,6 +265,8 @@ private fun TabStrip(state: AppState) {
                         .graphicsLayer { translationX = if (dragId == t.id) dragDx else 0f }
                         .onSizeChanged { widths[t.id] = it.width }
                         .background(if (sel) p.bg else if (hov) p.hover else Color.Transparent).hoverable(src)
+                        // the selected tab's underline is painted by the tab itself, so nothing can sit over it
+                        .drawBehind { if (sel) drawRect(p.accent, androidx.compose.ui.geometry.Offset(0f, size.height - TAB_UNDERLINE.toPx()), androidx.compose.ui.geometry.Size(size.width, TAB_UNDERLINE.toPx())) }
                         .onClick(matcher = PointerMatcher.mouse(PointerButton.Secondary)) { menu = true }
                         .onClick(matcher = PointerMatcher.mouse(PointerButton.Tertiary)) { state.closeTab(t.id) }
                         .clickable { state.activeTabId = t.id }.pointerHoverIcon(PointerIcon.Hand).padding(start = 12.dp, end = 4.dp),
@@ -273,7 +281,6 @@ private fun TabStrip(state: AppState) {
                     if (t.dirty && !hov) Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(p.accent)) }
                     else IconBtn(Ic.Close, { state.closeTab(t.id) }, size = 14)
                 }
-                if (sel) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp).background(p.accent))
                 ContextMenu(
                     menu, { menu = false },
                     (if (!t.isRequest) emptyList() else listOf(

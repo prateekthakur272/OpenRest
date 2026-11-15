@@ -41,7 +41,10 @@ fun Tabs(
         items.forEach { t ->
             val sel = t == selected
             Column(
-                Modifier.clickable { onSelect(t) }.pointerHoverIcon(PointerIcon.Hand).padding(horizontal = 10.dp).padding(top = 8.dp),
+                Modifier.clickable { onSelect(t) }.pointerHoverIcon(PointerIcon.Hand)
+                    // the underline is painted by the tab itself (its last 2dp), so nothing can cover it
+                    .drawBehind { if (sel) drawRect(p.accent, androidx.compose.ui.geometry.Offset(0f, size.height - 2.dp.toPx()), androidx.compose.ui.geometry.Size(size.width, 2.dp.toPx())) }
+                    .padding(horizontal = 10.dp).padding(top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -49,7 +52,7 @@ fun Tabs(
                     badge(t)?.let { b -> T(b, color = p.accent, size = 11, weight = FontWeight.SemiBold) }
                 }
                 Spacer(Modifier.height(6.dp))
-                Box(Modifier.height(2.dp).fillMaxWidth().background(if (sel) p.accent else Color.Transparent))
+                Box(Modifier.height(2.dp).fillMaxWidth())
             }
         }
     }
